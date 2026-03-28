@@ -22,7 +22,7 @@ int Character::getHP() const {
     return hp;
 }
 
-int Character::getMaxHP() const {
+int Character::getMaxHP() const {// Returns maximum HP after applying modifiers
     return getFinalStat(StatType::MaxHP);
 }
 
@@ -46,11 +46,11 @@ int Character::getMaxMana() const {
     return mana.getMax();
 }
 
-bool Character::isDefending() const {
+bool Character::isDefending() const {// Returns whether the character is defending
     return defending;
 }
 
-Party* Character::getOwnerParty() const {
+Party* Character::getOwnerParty() const {// Returns the party the character belongs to
     return ownerParty;
 }
 
@@ -58,7 +58,7 @@ const std::vector<std::shared_ptr<Skill>>& Character::getSkills() const {
     return skills;
 }
 
-const StatBlock& Character::getBaseStats() const {
+const StatBlock& Character::getBaseStats() const {// Returns base stats (before buffs/debuffs)
     return baseStats;
 }
 
@@ -66,7 +66,7 @@ bool Character::isAlive() const {
     return hp > 0;
 }
 
-bool Character::isOverencumbered() const {
+bool Character::isOverencumbered() const {// Checks if character is carrying too much weight
     return weight > maxWeight;
 }
 
@@ -78,16 +78,16 @@ void Character::setDefending(bool def) {
     defending = def;
 }
 
-void Character::setLevel(int lvl) {
+void Character::setLevel(int lvl) {// Sets character level (minimum level = 1)
     level = std::max(1, lvl);
 }
-
+// Adds weight (e.g. picking up items)
 void Character::addWeight(int amount) {
     weight += amount;
     checkOverencumbered();
 }
 
-void Character::removeWeight(int amount) {
+void Character::removeWeight(int amount) {// Removes weight (e.g. dropping items)
     weight = std::max(0, weight - amount);
 }
 
@@ -95,7 +95,7 @@ void Character::increaseAttack(int amount) {
     baseStats.increaseStat(StatType::Attack, amount);
 }
 
-void Character::takeDamage(int amount) {
+void Character::takeDamage(int amount) {// Applies damage to the character
     hp = std::max(0, hp - std::max(0, amount));
 }
 
@@ -103,11 +103,11 @@ void Character::heal(int amount) {
     hp = std::min(getMaxHP(), hp + std::max(0, amount));
 }
 
-void Character::consumeMana(int amount) {
+void Character::consumeMana(int amount) {// Consumes mana when casting skills
     mana.consume(amount);
 }
 
-void Character::restoreMana(int amount) {
+void Character::restoreMana(int amount) {// Restores mana
     mana.restore(amount);
 }
 
@@ -118,7 +118,7 @@ void Character::addSkill(std::shared_ptr<Skill> s) {
 void Character::removeSkill(const std::shared_ptr<Skill>& s) {
     skills.erase(std::remove(skills.begin(), skills.end(), s), skills.end());
 }
-
+// Applies a status effect to the character (e.g. poison, stun)
 void Character::applyStatus(Battle& battle, std::shared_ptr<StatusEffect> status) {
     if (!status) return;
     
@@ -133,27 +133,27 @@ void Character::applyBuff(Battle& battle, std::shared_ptr<Buff> buff) {
     buffs.push_back(buff);
     battle.getLog()->add("  " + name + " gains buff: " + buff->getName());
 }
-
+// Updates all status effects each turn
 void Character::tickStatuses(Battle& battle, TickTiming when) {
     for (auto& status : statuses) {
-        if (status && status->getTiming() == when) {
-            status->onTick(battle, shared_from_this());
-            status->decrement();
+        if (status && status->getTiming() == when) {// Check if status should trigger at this timing
+            status->onTick(battle, shared_from_this());// Execute status behavior
+            status->decrement();// Reduce remaining duration
             
             if (status->expired()) {
                 battle.getLog()->add("  " + name + "'s " + status->getName() + " expired");
-                status->onExpire(battle, shared_from_this());
+                status->onExpire(battle, shared_from_this()); // Execute expire logic
             }
         }
     }
 
-    statuses.erase(
+    statuses.erase( // Remove expired statuses from list
         std::remove_if(statuses.begin(), statuses.end(),
             [](const std::shared_ptr<StatusEffect>& s) { return !s || s->expired(); }),
         statuses.end()
     );
 }
-
+// Updates buffs every turn
 void Character::tickBuffs(Battle& battle) {
     for (auto& buff : buffs) {
         if (buff) {
